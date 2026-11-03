@@ -29,21 +29,28 @@ export default function AuthModal({ onLoginSuccess }) {
     e.preventDefault();
     setErrorMsg("");
 
+    const inputId = formData.userId.trim().toLowerCase();
+    const inputPass = formData.password.trim();
+
     const storedUsers = JSON.parse(localStorage.getItem("rescue_users_v18")) || [];
 
-    const user = storedUsers.find(
-      (u) =>
-        (u.userId.toLowerCase() === formData.userId.toLowerCase() ||
-          u.email?.toLowerCase() === formData.userId.toLowerCase()) &&
-        u.password === formData.password &&
-        u.role === "customer"
-    );
+    const user = storedUsers.find((u) => {
+      const storedId = (u.userId || u.username || "").trim().toLowerCase();
+      const storedEmail = (u.email || "").trim().toLowerCase();
+      const storedPass = (u.password || "").trim();
+
+      const idMatches = storedId === inputId || storedEmail === inputId;
+      const passMatches = storedPass === inputPass;
+      const roleMatches = !u.role || u.role === "customer";
+
+      return idMatches && passMatches && roleMatches;
+    });
 
     if (user) {
       localStorage.setItem("rescue_active_user_v18", JSON.stringify(user));
       onLoginSuccess(user);
     } else {
-      setErrorMsg("Invalid customer credentials. Please check your username or register.");
+      setErrorMsg("Invalid customer credentials. Please check your username or password.");
     }
   };
 
@@ -52,21 +59,24 @@ export default function AuthModal({ onLoginSuccess }) {
     e.preventDefault();
     setErrorMsg("");
 
+    const inputId = formData.userId.trim().toLowerCase();
+    const inputPass = formData.password.trim();
+
     const storedUsers = JSON.parse(localStorage.getItem("rescue_users_v18")) || [];
 
     // Check fixed default admin or created admin accounts in LocalStorage
-    const isDefaultAdmin = formData.userId === "admin" && formData.password === "admin123";
+    const isDefaultAdmin = inputId === "admin" && inputPass === "admin123";
     const isRegisteredAdmin = storedUsers.some(
       (u) =>
-        (u.userId.toLowerCase() === formData.userId.toLowerCase() ||
-          u.email?.toLowerCase() === formData.userId.toLowerCase()) &&
-        u.password === formData.password &&
+        ((u.userId || u.username || "").trim().toLowerCase() === inputId ||
+          (u.email || "").trim().toLowerCase() === inputId) &&
+        (u.password || "").trim() === inputPass &&
         u.role === "admin"
     );
 
     if (isDefaultAdmin || isRegisteredAdmin) {
       const adminUser = {
-        userId: formData.userId,
+        userId: formData.userId.trim(),
         name: "Shelter Admin",
         role: "admin",
       };
@@ -82,23 +92,32 @@ export default function AuthModal({ onLoginSuccess }) {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!formData.userId.trim() || !formData.password.trim() || !formData.name.trim()) {
+    const cleanUserId = formData.userId.trim();
+    const cleanName = formData.name.trim();
+    const cleanEmail = formData.email.trim();
+    const cleanPassword = formData.password.trim();
+
+    if (!cleanUserId || !cleanPassword || !cleanName) {
       setErrorMsg("Please complete all required fields.");
       return;
     }
 
     const storedUsers = JSON.parse(localStorage.getItem("rescue_users_v18")) || [];
 
-    if (storedUsers.some((u) => u.userId.toLowerCase() === formData.userId.toLowerCase())) {
+    if (
+      storedUsers.some(
+        (u) => (u.userId || u.username || "").toLowerCase() === cleanUserId.toLowerCase()
+      )
+    ) {
       setErrorMsg("Username is already taken. Please choose another.");
       return;
     }
 
     const newUser = {
-      userId: formData.userId.trim(),
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      password: formData.password,
+      userId: cleanUserId,
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
       role: "customer",
     };
 
