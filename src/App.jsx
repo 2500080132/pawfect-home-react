@@ -293,6 +293,7 @@ function App() {
               />
             ) : (
               <UserModule
+                currentUser={user}
                 user={user}
                 dogs={dogs}
                 requests={requests}
