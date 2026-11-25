@@ -115,59 +115,95 @@ const DEFAULT_DOGS = [
 
 function App() {
   const [user, setUser] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_active_user_v18")) || null;
+    try {
+      return JSON.parse(localStorage.getItem("rescue_active_user_v18")) || null;
+    } catch {
+      return null;
+    }
   });
 
   const [usersList, setUsersList] = useState(() => {
-    return (
-      JSON.parse(localStorage.getItem("rescue_users_v18")) || [
-        {
-          id: 101,
-          userId: "customer1",
-          name: "Jane Adopter",
-          username: "customer1",
-          email: "jane@example.com",
-          password: "password123",
-          role: "adopter",
-          phone: "",
-          address: "",
-          homeType: "Apartment",
-          experience: "First-time owner"
-        }
-      ]
-    );
+    try {
+      return (
+        JSON.parse(localStorage.getItem("rescue_users_v18")) || [
+          {
+            id: 101,
+            userId: "customer1",
+            name: "Jane Adopter",
+            username: "customer1",
+            email: "jane@example.com",
+            password: "password123",
+            role: "adopter",
+            phone: "",
+            address: "",
+            homeType: "Apartment",
+            experience: "First-time owner"
+          }
+        ]
+      );
+    } catch {
+      return [];
+    }
   });
 
   const [dogs, setDogs] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("rescue_dogs_v18"));
       if (!Array.isArray(saved) || saved.length === 0) return DEFAULT_DOGS;
-      const existingIds = new Set(saved.map((d) => d.id));
-      const missingDefaults = DEFAULT_DOGS.filter((d) => !existingIds.has(d.id));
-      return missingDefaults.length > 0 ? [...saved, ...missingDefaults] : saved;
+      const seenNames = new Set();
+      const uniqueSaved = saved.filter((d) => {
+        const key = (d.name || "").trim().toLowerCase();
+        if (!key || seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+      });
+      const missingDefaults = DEFAULT_DOGS.filter(
+        (d) => !seenNames.has(d.name.trim().toLowerCase())
+      );
+      return [...uniqueSaved, ...missingDefaults];
     } catch {
       return DEFAULT_DOGS;
     }
   });
 
   const [requests, setRequests] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_requests_v18")) || [];
+    try {
+      return JSON.parse(localStorage.getItem("rescue_requests_v18")) || [];
+    } catch {
+      return [];
+    }
   });
 
   const [adoptedHistory, setAdoptedHistory] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_adopted_history_v18")) || [];
+    try {
+      return JSON.parse(localStorage.getItem("rescue_adopted_history_v18")) || [];
+    } catch {
+      return [];
+    }
   });
 
   const [strayReports, setStrayReports] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_strays_v18")) || [];
+    try {
+      return JSON.parse(localStorage.getItem("rescue_strays_v18")) || [];
+    } catch {
+      return [];
+    }
   });
 
   const [messages, setMessages] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_messages_v18")) || [];
+    try {
+      return JSON.parse(localStorage.getItem("rescue_messages_v18")) || [];
+    } catch {
+      return [];
+    }
   });
 
   const [favorites, setFavorites] = useState(() => {
-    return JSON.parse(localStorage.getItem("rescue_favs_v18")) || [];
+    try {
+      return JSON.parse(localStorage.getItem("rescue_favs_v18")) || [];
+    } catch {
+      return [];
+    }
   });
 
   const [activeTab, setActiveTab] = useState("browse");
@@ -216,7 +252,12 @@ function App() {
       username: loggedInUser.username || loggedInUser.userId
     };
     setUser(normalized);
-    setUsersList(JSON.parse(localStorage.getItem("rescue_users_v18")) || usersList);
+    try {
+      const latestUsers = JSON.parse(localStorage.getItem("rescue_users_v18"));
+      if (Array.isArray(latestUsers)) setUsersList(latestUsers);
+    } catch {
+      // keep current usersList
+    }
     setActiveTab("browse");
     showToast(`Welcome back, ${normalized.name || normalized.username}!`);
   };
