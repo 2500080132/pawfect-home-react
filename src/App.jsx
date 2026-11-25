@@ -115,14 +115,15 @@ const DEFAULT_DOGS = [
 
 function App() {
   const [user, setUser] = useState(() => {
-    return JSON.parse(localStorage.getItem("pawfect_user_v18")) || null;
+    return JSON.parse(localStorage.getItem("rescue_active_user_v18")) || null;
   });
 
   const [usersList, setUsersList] = useState(() => {
     return (
-      JSON.parse(localStorage.getItem("pawfect_users_list_v18")) || [
+      JSON.parse(localStorage.getItem("rescue_users_v18")) || [
         {
           id: 101,
+          userId: "customer1",
           name: "Jane Adopter",
           username: "customer1",
           email: "jane@example.com",
@@ -178,11 +179,11 @@ function App() {
   };
 
   useEffect(() => {
-    localStorage.setItem("pawfect_user_v18", JSON.stringify(user));
+    localStorage.setItem("rescue_active_user_v18", JSON.stringify(user));
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem("pawfect_users_list_v18", JSON.stringify(usersList));
+    localStorage.setItem("rescue_users_v18", JSON.stringify(usersList));
   }, [usersList]);
 
   useEffect(() => {
@@ -209,17 +210,15 @@ function App() {
     localStorage.setItem("rescue_favs_v18", JSON.stringify(favorites));
   }, [favorites]);
 
-  const handleLogin = (loggedInUser) => {
-    setUser(loggedInUser);
+  const handleLoginSuccess = (loggedInUser) => {
+    const normalized = {
+      ...loggedInUser,
+      username: loggedInUser.username || loggedInUser.userId
+    };
+    setUser(normalized);
+    setUsersList(JSON.parse(localStorage.getItem("rescue_users_v18")) || usersList);
     setActiveTab("browse");
-    showToast(`Welcome back, ${loggedInUser.name || loggedInUser.username}!`);
-  };
-
-  const handleRegister = (newUser) => {
-    setUsersList((prev) => [...prev, newUser]);
-    setUser(newUser);
-    setActiveTab("browse");
-    showToast(`Account created! Welcome to Pawfect Home, ${newUser.name}.`);
+    showToast(`Welcome back, ${normalized.name || normalized.username}!`);
   };
 
   const handleUpdateProfile = (updatedFields) => {
@@ -227,7 +226,9 @@ function App() {
     const updatedUser = { ...user, ...updatedFields };
     setUser(updatedUser);
     setUsersList((prev) =>
-      prev.map((u) => (u.id === user.id ? updatedUser : u))
+      prev.map((u) =>
+        (u.userId || u.username) === (user.userId || user.username) ? updatedUser : u
+      )
     );
     showToast("Adopter profile updated & saved for 1-click applications!");
   };
@@ -254,9 +255,8 @@ function App() {
 
       {!user ? (
         <AuthModal
-          usersList={usersList}
-          onLogin={handleLogin}
-          onRegister={handleRegister}
+          onLoginSuccess={handleLoginSuccess}
+          showToast={showToast}
         />
       ) : (
         <>
@@ -266,7 +266,11 @@ function App() {
             setActiveTab={setActiveTab}
             onLogout={handleLogout}
             favCount={favorites.length}
-            msgCount={messages.filter((m) => m.username === user.username && m.reply).length}
+            msgCount={
+              messages.filter(
+                (m) => m.username === (user.username || user.userId) && m.reply
+              ).length
+            }
             onOpenProfile={() => setActiveTab("profile")}
           />
 
