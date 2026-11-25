@@ -18,8 +18,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80",
     sire: "Max (Purebred Golden)",
     dam: "Bella (Purebred Golden)",
+    father: "Max (Purebred Golden)",
+    mother: "Bella (Purebred Golden)",
+    microchip: "CHIP-98401",
     vaccines: ["Rabies (Valid till Dec 2026)", "DHPP Booster", "Bordetella"],
-    medicalNotes: "Fully vaccinated, dewormed, microchipped, and cleared for adoption."
+    medicalNotes: "Fully vaccinated, dewormed, microchipped, and cleared for adoption.",
+    vetNotes: "Fully vaccinated, dewormed, microchipped, and cleared for adoption."
   },
   {
     id: 2,
@@ -33,8 +37,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80",
     sire: "Duke (Pembroke Corgi)",
     dam: "Lucy (Pembroke Corgi)",
+    father: "Duke (Pembroke Corgi)",
+    mother: "Lucy (Pembroke Corgi)",
+    microchip: "CHIP-98402",
     vaccines: ["Rabies (Valid till Oct 2026)", "Parvovirus", "Canine Distemper"],
-    medicalNotes: "Healthy weight, active joints, microchipped, and heartworm negative."
+    medicalNotes: "Healthy weight, active joints, microchipped, and heartworm negative.",
+    vetNotes: "Healthy weight, active joints, microchipped, and heartworm negative."
   },
   {
     id: 3,
@@ -48,8 +56,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80",
     sire: "Leo (Champion Line)",
     dam: "Daisy (Cream Chow)",
+    father: "Leo (Champion Line)",
+    mother: "Daisy (Cream Chow)",
+    microchip: "CHIP-98403",
     vaccines: ["Rabies (Valid till Jan 2027)", "DHPP", "Leptospirosis"],
-    medicalNotes: "Neutered, coat groomed, routine blood panel normal."
+    medicalNotes: "Neutered, coat groomed, routine blood panel normal.",
+    vetNotes: "Neutered, coat groomed, routine blood panel normal."
   },
   {
     id: 4,
@@ -63,8 +75,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800&q=80",
     sire: "Oscar (Fawn Frenchie)",
     dam: "Chloe (Brindle Frenchie)",
+    father: "Oscar (Fawn Frenchie)",
+    mother: "Chloe (Brindle Frenchie)",
+    microchip: "CHIP-98404",
     vaccines: ["Rabies (Valid till Nov 2026)", "DHPP", "Bordetella"],
-    medicalNotes: "Vaccinated, microchipped, and cleared for indoor living."
+    medicalNotes: "Vaccinated, microchipped, and cleared for indoor living.",
+    vetNotes: "Vaccinated, microchipped, and cleared for indoor living."
   },
   {
     id: 5,
@@ -78,8 +94,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1505628346881-b72b27e84530?auto=format&fit=crop&w=800&q=80",
     sire: "Oliver (Tri-color Beagle)",
     dam: "Daisy (Lemon Beagle)",
+    father: "Oliver (Tri-color Beagle)",
+    mother: "Daisy (Lemon Beagle)",
+    microchip: "CHIP-98405",
     vaccines: ["Puppy DHPP Series", "Bordetella", "Deworming Complete"],
-    medicalNotes: "First two puppy vaccine rounds complete; microchipped and active."
+    medicalNotes: "First two puppy vaccine rounds complete; microchipped and active.",
+    vetNotes: "First two puppy vaccine rounds complete; microchipped and active."
   },
   {
     id: 6,
@@ -93,8 +113,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?auto=format&fit=crop&w=800&q=80",
     sire: "Rex (Working Line GSD)",
     dam: "Bella (Black & Tan GSD)",
+    father: "Rex (Working Line GSD)",
+    mother: "Bella (Black & Tan GSD)",
+    microchip: "CHIP-98406",
     vaccines: ["Rabies (Valid till Feb 2027)", "DHPP", "Lyme Vaccine"],
-    medicalNotes: "Neutered, hip-checked, and up to date on all annual boosters."
+    medicalNotes: "Neutered, hip-checked, and up to date on all annual boosters.",
+    vetNotes: "Neutered, hip-checked, and up to date on all annual boosters."
   },
   {
     id: 7,
@@ -108,8 +132,12 @@ const DEFAULT_DOGS = [
     image: "https://images.unsplash.com/photo-1544568100-847a948585b9?auto=format&fit=crop&w=800&q=80",
     sire: "Community Street Rescue",
     dam: "Community Street Rescue",
+    father: "Community Street Rescue",
+    mother: "Community Street Rescue",
+    microchip: "CHIP-98407",
     vaccines: ["Anti-Rabies (Valid till Mar 2027)", "9-in-1 DHPPiL", "Dewormed"],
-    medicalNotes: "Rescued near Vijayawada; fully vaccinated, tick-treated, sterilized, and very affectionate."
+    medicalNotes: "Rescued near Vijayawada; fully vaccinated, tick-treated, sterilized, and very affectionate.",
+    vetNotes: "Rescued near Vijayawada; fully vaccinated, tick-treated, sterilized, and very affectionate."
   }
 ];
 
@@ -136,8 +164,8 @@ function App() {
             role: "adopter",
             phone: "",
             address: "",
-            homeType: "Apartment",
-            experience: "First-time owner"
+            homeType: "Apartment / Flat",
+            experience: "First-time Dog Owner"
           }
         ]
       );
@@ -206,7 +234,7 @@ function App() {
     }
   });
 
-  const [activeTab, setActiveTab] = useState("browse");
+  const [currentView, setCurrentView] = useState("catalog");
   const [toast, setToast] = useState(null);
 
   const showToast = (msg) => {
@@ -249,6 +277,7 @@ function App() {
   const handleLoginSuccess = (loggedInUser) => {
     const normalized = {
       ...loggedInUser,
+      userId: loggedInUser.userId || loggedInUser.username,
       username: loggedInUser.username || loggedInUser.userId
     };
     setUser(normalized);
@@ -258,7 +287,7 @@ function App() {
     } catch {
       // keep current usersList
     }
-    setActiveTab("browse");
+    setCurrentView("catalog");
     showToast(`Welcome back, ${normalized.name || normalized.username}!`);
   };
 
@@ -276,7 +305,7 @@ function App() {
 
   const handleLogout = () => {
     setUser(null);
-    setActiveTab("browse");
+    setCurrentView("catalog");
   };
 
   const toggleFavorite = (dogId) => {
@@ -284,6 +313,64 @@ function App() {
       prev.includes(dogId) ? prev.filter((id) => id !== dogId) : [...prev, dogId]
     );
   };
+
+  // Synced Adopter -> Admin Application Handler
+  const handleSubmitApplication = (appData) => {
+    const enrichedApp = {
+      ...appData,
+      id: appData.appId || "APP-" + Date.now().toString().slice(-6),
+      appId: appData.appId || "APP-" + Date.now().toString().slice(-6),
+      applicantName: appData.userName || user?.name,
+      username: appData.userId || user?.userId || user?.username,
+      email: appData.userEmail || user?.email || "",
+      reason: appData.notes || "Standard adoption request",
+      stage: appData.status || "Submitted",
+      adminRemark: appData.adminRemarks || "Application received by shelter"
+    };
+    setRequests((prev) => [enrichedApp, ...prev]);
+    setCurrentView("applications");
+    showToast(`Adoption request submitted for ${enrichedApp.dogName}!`);
+  };
+
+  // Synced Adopter -> Admin Stray Rescue Handler
+  const handleSubmitRescue = (reportData) => {
+    setStrayReports((prev) => [reportData, ...prev]);
+    showToast("Stray rescue alert dispatched to shelter team!");
+  };
+
+  // Synced Adopter -> Admin Inquiry Message Handler
+  const handleSendMessage = (msgData) => {
+    const enrichedMsg = {
+      ...msgData,
+      senderName: msgData.userName || user?.name,
+      username: msgData.userId || user?.userId || user?.username
+    };
+    setMessages((prev) => [enrichedMsg, ...prev]);
+    showToast("Question sent to shelter manager! View replies in My Messages.");
+  };
+
+  // Normalize requests & messages so Admin updates reflect in UserModule immediately
+  const normalizedRequests = requests.map((r) => ({
+    ...r,
+    appId: r.appId || String(r.id),
+    userId: r.userId || r.username,
+    userName: r.userName || r.applicantName,
+    notes: r.notes || r.reason,
+    status: r.stage || r.status || "Submitted",
+    adminRemarks: r.adminRemark || r.adminRemarks || "Under review by adoption coordinator"
+  }));
+
+  const normalizedMessages = messages.map((m) => ({
+    ...m,
+    userId: m.userId || m.username,
+    userName: m.userName || m.senderName,
+    adminReply: m.reply || m.adminReply || "",
+    repliedDate: m.repliedAt || m.repliedDate || ""
+  }));
+
+  const unreadRepliesCount = normalizedMessages.filter(
+    (m) => m.userId === (user?.userId || user?.username) && m.adminReply
+  ).length;
 
   return (
     <div className="app-shell">
@@ -303,17 +390,11 @@ function App() {
         <>
           <Navbar
             currentUser={user}
-            user={user}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
             onLogout={handleLogout}
+            currentView={currentView}
+            setView={setCurrentView}
             favCount={favorites.length}
-            msgCount={
-              messages.filter(
-                (m) => m.username === (user.username || user.userId) && m.reply
-              ).length
-            }
-            onOpenProfile={() => setActiveTab("profile")}
+            msgCount={unreadRepliesCount}
           />
 
           <main className="content-area">
@@ -334,22 +415,19 @@ function App() {
               />
             ) : (
               <UserModule
-                currentUser={user}
-                user={user}
                 dogs={dogs}
-                requests={requests}
-                setRequests={setRequests}
-                adoptedHistory={adoptedHistory}
-                strayReports={strayReports}
-                setStrayReports={setStrayReports}
-                messages={messages}
-                setMessages={setMessages}
                 favorites={favorites}
                 toggleFavorite={toggleFavorite}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
+                currentView={currentView}
+                setView={setCurrentView}
+                applications={normalizedRequests}
+                onSubmitApplication={handleSubmitApplication}
+                currentUser={user}
                 onUpdateProfile={handleUpdateProfile}
-                showToast={showToast}
+                messages={normalizedMessages}
+                onSendMessage={handleSendMessage}
+                rescueReports={strayReports}
+                onSubmitRescue={handleSubmitRescue}
               />
             )}
           </main>
