@@ -261,6 +261,7 @@ function App() {
       ) : (
         <>
           <Navbar
+            currentUser={user}
             user={user}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
