@@ -1,252 +1,404 @@
 import React, { useState, useRef } from "react";
 import {
-  PlusCircle, Trash2, CheckCircle, XCircle, MessageSquare,
-  Download, Upload, BarChart2, Edit3, Award, Users, AlertTriangle, Printer
+  PlusCircle,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  BarChart3,
+  Download,
+  Upload,
+  Award,
+  Edit3,
+  AlertTriangle,
+  MessageSquare,
+  Users
 } from "lucide-react";
 
-export default function AdminModule({
+const AdminModule = ({
   dogs,
-  onAddDog,
-  onEditDog,
-  onDeleteDog,
-  applications,
-  onUpdateAppStatus,
-  messages = [],
-  onReplyMessage,
-  rescueReports = [],
-  onUpdateRescueStatus,
-  adoptionHistory = [],
-  registeredUsers = [],
-  onRestoreBackup
-}) {
-  const [newDog, setNewDog] = useState({
-    name: "",
-    breed: "",
-    age: "",
-    ageGroup: "Young",
-    size: "Medium",
-    traits: "Good with Kids, Friendly",
-    vetNotes: "",
-    image: "",
-    father: "",
-    mother: "",
-    microchip: "",
-    vaccines: "Rabies, DHPP"
-  });
+  setDogs,
+  requests,
+  setRequests,
+  adoptedHistory,
+  setAdoptedHistory,
+  strayReports,
+  setStrayReports,
+  messages,
+  setMessages,
+  usersList,
+  showToast
+}) => {
+  const [name, setName] = useState("");
+  const [breed, setBreed] = useState("");
+  const [age, setAge] = useState("");
+  const [ageGroup, setAgeGroup] = useState("Young");
+  const [size, setSize] = useState("Medium");
+  const [traitsInput, setTraitsInput] = useState("");
+  const [medicalNotes, setMedicalNotes] = useState("");
+  const [image, setImage] = useState("");
+  const [sire, setSire] = useState("");
+  const [dam, setDam] = useState("");
 
   const [editingDog, setEditingDog] = useState(null);
-  const [decisionNotes, setDecisionNotes] = useState({});
-  const [replyNotes, setReplyNotes] = useState({});
-  const [certificateRecord, setCertificateRecord] = useState(null);
+  const [remarks, setRemarks] = useState({});
+  const [replyDrafts, setReplyDrafts] = useState({});
+  const [certificateData, setCertificateData] = useState(null);
+
   const fileInputRef = useRef(null);
 
-  const handleDecision = (appId, status) => {
-    const remark =
-      decisionNotes[appId] ||
-      (status === "Approved"
-        ? "Home check verified & adoption approved!"
-        : status === "Meet & Greet"
-        ? "Scheduled for shelter meet & greet"
-        : status === "Under Review"
-        ? "Application under vet & coordinator review"
-        : "Requirements not met");
-    onUpdateAppStatus(appId, status, remark);
+  const [maxCapacity, setMaxCapacity] = useState(() => {
+    return Number(localStorage.getItem("rescue_kennel_capacity_v18")) || 20;
+  });
+
+  const handleCapacityChange = (delta) => {
+    const next = Math.max(dogs.length, Math.min(50, maxCapacity + delta));
+    setMaxCapacity(next);
+    localStorage.setItem("rescue_kennel_capacity_v18", String(next));
+    showToast(`Kennel capacity updated to ${next} slots.`);
   };
 
-  const handleCreate = (e) => {
-    e.preventDefault();
-    if (!newDog.name || !newDog.breed) return;
+  const capacityPercent = Math.min(Math.round((dogs.length / maxCapacity) * 100), 100);
 
-    const dogObj = {
-      ...newDog,
-      id: Date.now().toString(),
+  const handleAddDog = (e) => {
+    e.preventDefault();
+    if (!name.trim() || !breed.trim() || !age.trim()) return;
+
+    const newDog = {
+      id: Date.now(),
+      name: name.trim(),
+      breed: breed.trim(),
+      age: age.trim(),
+      ageGroup,
+      size,
+      traits: traitsInput
+        ? traitsInput.split(",").map((t) => t.trim()).filter(Boolean)
+        : ["Friendly", "Healthy"],
       status: "Available",
-      traits: newDog.traits.split(",").map((t) => t.trim()).filter(Boolean),
       image:
-        newDog.image ||
-        "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80",
-      vaccines: newDog.vaccines.split(",").map((v) => v.trim()).filter(Boolean)
+        image.trim() ||
+        "https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80",
+      sire: sire.trim() || "Verified Shelter Lineage",
+      dam: dam.trim() || "Verified Shelter Lineage",
+      vaccines: ["Rabies (Up to date)", "DHPP Core Vaccine", "Dewormed"],
+      medicalNotes: medicalNotes.trim() || "Cleared by shelter veterinarian."
     };
 
-    onAddDog(dogObj);
-    setNewDog({
-      name: "",
-      breed: "",
-      age: "",
-      ageGroup: "Young",
-      size: "Medium",
-      traits: "Good with Kids, Friendly",
-      vetNotes: "",
-      image: "",
-      father: "",
-      mother: "",
-      microchip: "",
-      vaccines: "Rabies, DHPP"
-    });
+    setDogs((prev) => [...prev, newDog]);
+    setName("");
+    setBreed("");
+    setAge("");
+    setAgeGroup("Young");
+    setSize("Medium");
+    setTraitsInput("");
+    setMedicalNotes("");
+    setImage("");
+    setSire("");
+    setDam("");
+    showToast(`${newDog.name} added to shelter catalog!`);
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEditDog = (e) => {
     e.preventDefault();
     if (!editingDog) return;
-    onEditDog(editingDog);
+    setDogs((prev) =>
+      prev.map((d) => (d.id === editingDog.id ? editingDog : d))
+    );
+    showToast(`Updated listing for ${editingDog.name}.`);
     setEditingDog(null);
   };
 
-  // Export Full Shelter Backup
-  const exportData = () => {
-    const payload = {
-      dogs,
-      applications,
-      messages,
-      rescueReports,
-      adoptionHistory,
-      registeredUsers
-    };
-    const dataStr =
-      "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", "pawfect_home_full_backup.json");
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+  const handleDeleteDog = (id, dogName) => {
+    setDogs((prev) => prev.filter((d) => d.id !== id));
+    showToast(`${dogName} removed from active listings.`);
   };
 
-  // Two-Way Restore / Import JSON
-  const handleImportFile = (e) => {
+  const handleRequestStageChange = (req, newStage) => {
+    const adminRemark = remarks[req.id] || req.adminRemark || "";
+
+    if (newStage === "Approved") {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id
+            ? { ...r, status: "Approved", stage: "Approved", adminRemark }
+            : r
+        )
+      );
+
+      const dogObj = dogs.find((d) => d.id === req.dogId);
+      setDogs((prev) => prev.filter((d) => d.id !== req.dogId));
+
+      const historyEntry = {
+        id: Date.now(),
+        dogId: req.dogId,
+        dogName: req.dogName,
+        dogBreed: dogObj?.breed || "Rescue Dog",
+        adopterName: req.applicantName,
+        adopterUsername: req.username,
+        adopterEmail: req.email || "",
+        adopterPhone: req.phone || "",
+        adoptedDate: new Date().toLocaleDateString()
+      };
+      setAdoptedHistory((prev) => [historyEntry, ...prev]);
+      showToast(`Adoption approved! ${req.dogName} placed with ${req.applicantName}.`);
+    } else if (newStage === "Rejected") {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id
+            ? { ...r, status: "Rejected", stage: "Rejected", adminRemark }
+            : r
+        )
+      );
+      showToast(`Request for ${req.dogName} marked Rejected.`);
+    } else {
+      setRequests((prev) =>
+        prev.map((r) =>
+          r.id === req.id
+            ? { ...r, status: newStage, stage: newStage, adminRemark }
+            : r
+        )
+      );
+      showToast(`Updated ${req.applicantName}'s stage to ${newStage}.`);
+    }
+  };
+
+  const handleStrayStatus = (id, status) => {
+    setStrayReports((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status } : s))
+    );
+    showToast(`Stray rescue alert updated to "${status}".`);
+  };
+
+  const handleSendReply = (msgId) => {
+    const replyText = replyDrafts[msgId];
+    if (!replyText || !replyText.trim()) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === msgId
+          ? { ...m, reply: replyText.trim(), repliedAt: new Date().toLocaleDateString() }
+          : m
+      )
+    );
+    setReplyDrafts((prev) => ({ ...prev, [msgId]: "" }));
+    showToast("Reply sent to adopter!");
+  };
+
+  const handleBackupJSON = () => {
+    const backup = {
+      exportedAt: new Date().toISOString(),
+      maxCapacity,
+      dogs,
+      requests,
+      adoptedHistory,
+      strayReports,
+      messages
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pawfect-shelter-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Shelter JSON backup downloaded!");
+  };
+
+  const handleRestoreJSON = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = (event) => {
       try {
-        const parsed = JSON.parse(evt.target.result);
-        onRestoreBackup(parsed);
+        const data = JSON.parse(event.target.result);
+        if (Array.isArray(data.dogs)) setDogs(data.dogs);
+        if (Array.isArray(data.requests)) setRequests(data.requests);
+        if (Array.isArray(data.adoptedHistory)) setAdoptedHistory(data.adoptedHistory);
+        if (Array.isArray(data.strayReports)) setStrayReports(data.strayReports);
+        if (Array.isArray(data.messages)) setMessages(data.messages);
+        if (typeof data.maxCapacity === "number") {
+          setMaxCapacity(data.maxCapacity);
+          localStorage.setItem("rescue_kennel_capacity_v18", String(data.maxCapacity));
+        }
+        showToast("Shelter state restored from JSON backup!");
       } catch {
-        alert("Invalid JSON backup file.");
+        showToast("Invalid JSON backup file.");
       }
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
-  const maxCapacity = 10;
-  const capacityPercent = Math.min(Math.round((dogs.length / maxCapacity) * 100), 100);
-  const adoptersList = registeredUsers.filter((u) => u.role !== "admin");
+  const adoptersOnly = usersList.filter((u) => u.role !== "admin");
 
   return (
     <div className="admin-grid-layout">
-      {/* LEFT SIDEBAR: Kennel Occupancy, Backup/Restore & Publish New Dog */}
+      {/* LEFT SIDEBAR COLUMN */}
       <div className="admin-sidebar-col">
+        {/* Kennel Occupancy Card */}
         <div className="admin-card">
-          <h3><BarChart2 size={18} /> Kennel Occupancy</h3>
+          <h3>
+            <BarChart3 size={18} color="#ea580c" /> Kennel Occupancy
+          </h3>
           <div className="capacity-bar-container">
-            <div className="capacity-fill" style={{ width: `${capacityPercent}%` }}></div>
+            <div
+              className="capacity-fill"
+              style={{ width: `${capacityPercent}%` }}
+            />
           </div>
           <div className="capacity-labels">
-            <span><strong>{dogs.length}</strong> Dogs Housed</span>
-            <span>Max Limit: {maxCapacity}</span>
+            <span>
+              <strong>{dogs.length}</strong> Housed ({maxCapacity - dogs.length} Free)
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              Max Limit: <strong>{maxCapacity}</strong>
+              <button
+                type="button"
+                onClick={() => handleCapacityChange(-2)}
+                style={{
+                  padding: "1px 7px",
+                  borderRadius: "4px",
+                  border: "1px solid #cbd5e1",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  fontWeight: 700
+                }}
+                title="Decrease kennel capacity"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCapacityChange(2)}
+                style={{
+                  padding: "1px 7px",
+                  borderRadius: "4px",
+                  border: "1px solid #cbd5e1",
+                  background: "#f8fafc",
+                  cursor: "pointer",
+                  fontWeight: 700
+                }}
+                title="Increase kennel capacity"
+              >
+                +
+              </button>
+            </span>
           </div>
 
-          <button onClick={exportData} className="export-btn">
-            <Download size={14} /> Backup Shelter Records (JSON)
+          <button type="button" className="export-btn" onClick={handleBackupJSON}>
+            <Download size={15} /> Backup Shelter Records (JSON)
           </button>
 
+          <button
+            type="button"
+            className="export-btn"
+            style={{ background: "#fff7ed", color: "#ea580c", borderColor: "#fed7aa" }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={15} /> Restore / Import JSON
+          </button>
           <input
+            ref={fileInputRef}
             type="file"
             accept=".json"
-            ref={fileInputRef}
             style={{ display: "none" }}
-            onChange={handleImportFile}
+            onChange={handleRestoreJSON}
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="export-btn"
-            style={{ background: "#fff7ed", borderColor: "#fdba74", color: "#c2410c" }}
-          >
-            <Upload size={14} /> Restore / Import JSON
-          </button>
         </div>
 
-        {/* Publish New Dog Form with Live Preview & Vet Notes */}
+        {/* Publish New Dog Card */}
         <div className="admin-card">
-          <h3><PlusCircle size={20} /> Publish New Dog</h3>
-          <form onSubmit={handleCreate} className="admin-form">
+          <h3>
+            <PlusCircle size={18} color="#ea580c" /> Publish New Dog
+          </h3>
+          <form className="admin-form" onSubmit={handleAddDog}>
             <input
               type="text"
               placeholder="Dog Name *"
-              value={newDog.name}
-              onChange={(e) => setNewDog({ ...newDog, name: e.target.value })}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               required
             />
             <input
               type="text"
               placeholder="Breed *"
-              value={newDog.breed}
-              onChange={(e) => setNewDog({ ...newDog, breed: e.target.value })}
+              value={breed}
+              onChange={(e) => setBreed(e.target.value)}
               required
             />
             <input
               type="text"
               placeholder="Age (e.g. 2 Years) *"
-              value={newDog.age}
-              onChange={(e) => setNewDog({ ...newDog, age: e.target.value })}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
               required
             />
 
             <div className="two-col-inputs">
               <select
                 className="breed-dropdown"
-                value={newDog.ageGroup}
-                onChange={(e) => setNewDog({ ...newDog, ageGroup: e.target.value })}
+                value={ageGroup}
+                onChange={(e) => setAgeGroup(e.target.value)}
               >
-                <option value="Puppy">Puppy</option>
                 <option value="Young">Young</option>
+                <option value="Puppy">Puppy</option>
                 <option value="Adult">Adult</option>
               </select>
+
               <select
                 className="breed-dropdown"
-                value={newDog.size}
-                onChange={(e) => setNewDog({ ...newDog, size: e.target.value })}
+                value={size}
+                onChange={(e) => setSize(e.target.value)}
               >
-                <option value="Small">Small</option>
                 <option value="Medium">Medium</option>
+                <option value="Small">Small</option>
                 <option value="Large">Large</option>
               </select>
             </div>
 
             <input
               type="text"
-              placeholder="Traits (comma separated)"
-              value={newDog.traits}
-              onChange={(e) => setNewDog({ ...newDog, traits: e.target.value })}
+              placeholder="Good with Kids, Friendly"
+              value={traitsInput}
+              onChange={(e) => setTraitsInput(e.target.value)}
             />
             <input
               type="text"
               placeholder="Medical / Vet Notes"
-              value={newDog.vetNotes}
-              onChange={(e) => setNewDog({ ...newDog, vetNotes: e.target.value })}
+              value={medicalNotes}
+              onChange={(e) => setMedicalNotes(e.target.value)}
             />
             <input
               type="text"
               placeholder="Image URL"
-              value={newDog.image}
-              onChange={(e) => setNewDog({ ...newDog, image: e.target.value })}
+              value={image}
+              onChange={(e) => setImage(e.target.value)}
             />
-            {newDog.image && (
-              <img src={newDog.image} alt="Live preview" className="preview-banner-img" />
+
+            {image.trim() && (
+              <img
+                src={image}
+                alt="Preview"
+                className="preview-banner-img"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
             )}
+
             <input
               type="text"
               placeholder="Sire (Father)"
-              value={newDog.father}
-              onChange={(e) => setNewDog({ ...newDog, father: e.target.value })}
+              value={sire}
+              onChange={(e) => setSire(e.target.value)}
             />
             <input
               type="text"
               placeholder="Dam (Mother)"
-              value={newDog.mother}
-              onChange={(e) => setNewDog({ ...newDog, mother: e.target.value })}
+              value={dam}
+              onChange={(e) => setDam(e.target.value)}
             />
+
             <button type="submit" className="submit-btn">
               Publish Listing
             </button>
@@ -254,50 +406,53 @@ export default function AdminModule({
         </div>
       </div>
 
-      {/* RIGHT MAIN AREA */}
+      {/* RIGHT MAIN DATA COLUMN */}
       <div className="admin-data-col">
-        {/* 1. ADOPTION REQUESTS QUEUE WITH VETTING DETAILS & MULTI-STAGE WORKFLOW */}
+        {/* Adopter Adoption Requests */}
         <div className="admin-card">
-          <h3>Adopter Adoption Requests ({applications.length})</h3>
-          {applications.length === 0 ? (
+          <h3>Adopter Adoption Requests ({requests.length})</h3>
+          {requests.length === 0 ? (
             <p className="empty-state">No adoption requests submitted yet.</p>
           ) : (
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Dog &amp; Match</th>
-                  <th>Adopter Vetting Info</th>
+                  <th>Dog</th>
+                  <th>Adopter Details</th>
                   <th>Stage</th>
-                  <th>Remarks</th>
+                  <th>Admin Remark</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {applications.map((app) => (
-                  <tr key={app.appId}>
+                {requests.map((req) => (
+                  <tr key={req.id}>
                     <td>
-                      <strong>{app.dogName}</strong>
-                      <div style={{ fontSize: "0.76rem", color: "#6b7280" }}>{app.appId}</div>
-                      {app.matchScore && (
-                        <span className="badge badge-approved" style={{ display: "inline-block", marginTop: "4px" }}>
-                          {app.matchScore}% AI Match
-                        </span>
+                      <strong>{req.dogName}</strong>
+                      {req.matchScore && (
+                        <div style={{ fontSize: "0.76rem", color: "#059669", fontWeight: 700 }}>
+                          {req.matchScore}% AI Match
+                        </div>
                       )}
                     </td>
-                    <td style={{ fontSize: "0.82rem" }}>
-                      <strong>{app.userName}</strong>
-                      <div>{app.phone || "No phone"} • {app.userEmail}</div>
-                      <div style={{ color: "#6b7280" }}>{app.homeType} • {app.experience}</div>
+                    <td>
+                      <strong>{req.applicantName}</strong>
+                      <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                        {req.phone || "No phone"} • {req.homeType || "Home"}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#4b5563" }}>
+                        "{req.reason}"
+                      </div>
                     </td>
                     <td>
                       <select
                         className="stage-select"
-                        value={app.status === "Pending" ? "Submitted" : app.status}
-                        onChange={(e) => handleDecision(app.appId, e.target.value)}
+                        value={req.stage || req.status || "Submitted"}
+                        onChange={(e) => handleRequestStageChange(req, e.target.value)}
                       >
                         <option value="Submitted">Submitted</option>
                         <option value="Under Review">Under Review</option>
-                        <option value="Meet & Greet">Meet &amp; Greet</option>
+                        <option value="Meet & Greet">Meet & Greet</option>
                         <option value="Approved">Approved</option>
                         <option value="Rejected">Rejected</option>
                       </select>
@@ -305,24 +460,28 @@ export default function AdminModule({
                     <td>
                       <input
                         type="text"
-                        placeholder="Decision remark..."
                         className="admin-remark-input"
-                        value={decisionNotes[app.appId] ?? app.adminRemarks ?? ""}
-                        onChange={(e) => setDecisionNotes({ ...decisionNotes, [app.appId]: e.target.value })}
+                        placeholder="Add note..."
+                        value={remarks[req.id] ?? req.adminRemark ?? ""}
+                        onChange={(e) =>
+                          setRemarks((prev) => ({ ...prev, [req.id]: e.target.value }))
+                        }
                       />
                     </td>
                     <td>
                       <button
+                        type="button"
                         className="action-icon-btn approve"
-                        onClick={() => handleDecision(app.appId, "Approved")}
-                        title="Approve & Archive"
+                        title="Approve Adoption"
+                        onClick={() => handleRequestStageChange(req, "Approved")}
                       >
                         <CheckCircle size={18} />
                       </button>
                       <button
+                        type="button"
                         className="action-icon-btn reject"
-                        onClick={() => handleDecision(app.appId, "Rejected")}
-                        title="Reject"
+                        title="Reject Request"
+                        onClick={() => handleRequestStageChange(req, "Rejected")}
                       >
                         <XCircle size={18} />
                       </button>
@@ -334,35 +493,43 @@ export default function AdminModule({
           )}
         </div>
 
-        {/* 2. ADOPTION HISTORY ('WHO ADOPTED' LOG) + PRINTABLE CERTIFICATES */}
+        {/* Adoption History */}
         <div className="admin-card">
-          <h3><Award size={18} /> Adoption History — Who Adopted ({adoptionHistory.length})</h3>
-          {adoptionHistory.length === 0 ? (
+          <h3>
+            <Award size={18} color="#ea580c" /> Adoption History — Who Adopted ({adoptedHistory.length})
+          </h3>
+          {adoptedHistory.length === 0 ? (
             <p className="empty-state">Approved adoptions will automatically archive here.</p>
           ) : (
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Dog</th>
-                  <th>Adopted By</th>
-                  <th>Contact</th>
+                  <th>Adopter</th>
                   <th>Date</th>
                   <th>Certificate</th>
                 </tr>
               </thead>
               <tbody>
-                {adoptionHistory.map((rec) => (
-                  <tr key={rec.id}>
-                    <td><strong>{rec.dogName}</strong> ({rec.breed})</td>
-                    <td>{rec.adopterName}</td>
-                    <td>{rec.adopterPhone}</td>
-                    <td>{rec.adoptedDate}</td>
+                {adoptedHistory.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{item.dogName}</strong> ({item.dogBreed})
+                    </td>
+                    <td>
+                      <strong>{item.adopterName}</strong>
+                      <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                        {item.adopterEmail} {item.adopterPhone ? `• ${item.adopterPhone}` : ""}
+                      </div>
+                    </td>
+                    <td>{item.adoptedDate}</td>
                     <td>
                       <button
+                        type="button"
                         className="cert-btn"
-                        onClick={() => setCertificateRecord(rec)}
+                        onClick={() => setCertificateData(item)}
                       >
-                        <Printer size={14} /> Certificate
+                        <Award size={14} /> Certificate
                       </button>
                     </td>
                   </tr>
@@ -372,37 +539,37 @@ export default function AdminModule({
           )}
         </div>
 
-        {/* 3. STRAY RESCUE REPORTS BOARD */}
+        {/* Stray Rescue Reports */}
         <div className="admin-card">
-          <h3><AlertTriangle size={18} /> Stray Rescue Reports ({rescueReports.length})</h3>
-          {rescueReports.length === 0 ? (
+          <h3>
+            <AlertTriangle size={18} color="#ea580c" /> Stray Rescue Reports ({strayReports.length})
+          </h3>
+          {strayReports.length === 0 ? (
             <p className="empty-state">No stray rescue alerts reported yet.</p>
           ) : (
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Photo</th>
-                  <th>Location &amp; Notes</th>
-                  <th>Urgency</th>
-                  <th>Reported By</th>
+                  <th>Location & Urgency</th>
+                  <th>Reporter</th>
                   <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {rescueReports.map((rep) => (
+                {strayReports.map((rep) => (
                   <tr key={rep.id}>
-                    <td><img src={rep.photoUrl} alt="Stray" className="table-thumb" /></td>
                     <td>
-                      <strong>{rep.location}</strong>
-                      <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{rep.description}</div>
+                      <strong>{rep.location}</strong> ({rep.urgency})
+                      <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>
+                        {rep.description}
+                      </div>
                     </td>
-                    <td><span className="badge badge-pending">{rep.urgency}</span></td>
                     <td>{rep.reporterName}</td>
                     <td>
                       <select
                         className="stage-select"
                         value={rep.status}
-                        onChange={(e) => onUpdateRescueStatus(rep.id, e.target.value)}
+                        onChange={(e) => handleStrayStatus(rep.id, e.target.value)}
                       >
                         <option value="Pending">Pending</option>
                         <option value="In Progress">In Progress</option>
@@ -416,26 +583,36 @@ export default function AdminModule({
           )}
         </div>
 
-        {/* 4. USER INQUIRIES WITH INTERACTIVE REPLY */}
+        {/* User Inquiries */}
         <div className="admin-card">
-          <h3><MessageSquare size={18} /> User Inquiries ({messages.length})</h3>
+          <h3>
+            <MessageSquare size={18} color="#ea580c" /> User Inquiries ({messages.length})
+          </h3>
           {messages.length === 0 ? (
             <p className="empty-state">No questions received yet.</p>
           ) : (
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Adopter</th>
-                  <th>Subject &amp; Question</th>
-                  <th>Shelter Reply</th>
+                  <th>From</th>
+                  <th>Subject & Message</th>
+                  <th>Reply</th>
                 </tr>
               </thead>
               <tbody>
                 {messages.map((m) => (
                   <tr key={m.id}>
-                    <td><strong>{m.userName}</strong><div style={{ fontSize: "0.76rem" }}>{m.date}</div></td>
                     <td>
-                      <strong>{m.subject}:</strong> {m.message}
+                      <strong>{m.senderName || m.username}</strong>
+                    </td>
+                    <td>
+                      <strong>{m.subject}</strong>
+                      <div style={{ fontSize: "0.82rem", color: "#4b5563" }}>{m.message}</div>
+                      {m.reply && (
+                        <div className="reply-bubble">
+                          <strong>Shelter Reply:</strong> {m.reply}
+                        </div>
+                      )}
                     </td>
                     <td>
                       <div style={{ display: "flex", gap: "6px" }}>
@@ -443,14 +620,17 @@ export default function AdminModule({
                           type="text"
                           className="admin-remark-input"
                           placeholder="Write reply..."
-                          value={replyNotes[m.id] ?? m.adminReply ?? ""}
-                          onChange={(e) => setReplyNotes({ ...replyNotes, [m.id]: e.target.value })}
+                          value={replyDrafts[m.id] || ""}
+                          onChange={(e) =>
+                            setReplyDrafts((prev) => ({ ...prev, [m.id]: e.target.value }))
+                          }
                         />
                         <button
+                          type="button"
                           className="cert-btn"
-                          onClick={() => onReplyMessage(m.id, replyNotes[m.id] || "")}
+                          onClick={() => handleSendReply(m.id)}
                         >
-                          Reply
+                          Send
                         </button>
                       </div>
                     </td>
@@ -461,14 +641,14 @@ export default function AdminModule({
           )}
         </div>
 
-        {/* 5. ACTIVE LISTINGS WITH IN-PLACE EDIT & STATUS BADGES */}
+        {/* Active Listings */}
         <div className="admin-card">
           <h3>Active Listings ({dogs.length})</h3>
           <table className="data-table">
             <thead>
               <tr>
                 <th>Image</th>
-                <th>Name &amp; Specs</th>
+                <th>Name & Specs</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -482,7 +662,7 @@ export default function AdminModule({
                   <td>
                     <strong>{dog.name}</strong>
                     <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
-                      {dog.breed} • {dog.age} • {dog.size || "Medium"}
+                      {dog.breed} • {dog.age} • {dog.size}
                     </div>
                   </td>
                   <td>
@@ -492,19 +672,21 @@ export default function AdminModule({
                   </td>
                   <td>
                     <button
+                      type="button"
                       className="action-icon-btn"
                       style={{ color: "#2563eb" }}
+                      title="Edit Listing"
                       onClick={() => setEditingDog({ ...dog })}
-                      title="Edit dog"
                     >
-                      <Edit3 size={16} />
+                      <Edit3 size={17} />
                     </button>
                     <button
+                      type="button"
                       className="action-icon-btn delete"
-                      onClick={() => onDeleteDog(dog.id)}
-                      title="Delete dog"
+                      title="Delete Listing"
+                      onClick={() => handleDeleteDog(dog.id, dog.name)}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={17} />
                     </button>
                   </td>
                 </tr>
@@ -513,103 +695,133 @@ export default function AdminModule({
           </table>
         </div>
 
-        {/* 6. REGISTERED ADOPTERS DIRECTORY */}
+        {/* Registered Adopters Directory */}
         <div className="admin-card">
-          <h3><Users size={18} /> Registered Adopters Directory ({adoptersList.length})</h3>
-          {adoptersList.length === 0 ? (
-            <p className="empty-state">No registered adopters yet.</p>
-          ) : (
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Username / Email</th>
-                  <th>Phone</th>
-                  <th>Home Type</th>
+          <h3>
+            <Users size={18} color="#ea580c" /> Registered Adopters Directory ({adoptersOnly.length})
+          </h3>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Username / Email</th>
+                <th>Phone</th>
+                <th>Home Type</th>
+              </tr>
+            </thead>
+            <tbody>
+              {adoptersOnly.map((u) => (
+                <tr key={u.id}>
+                  <td>
+                    <strong>{u.name || "—"}</strong>
+                  </td>
+                  <td>
+                    {u.username} ({u.email})
+                  </td>
+                  <td>{u.phone || "Not provided"}</td>
+                  <td>{u.homeType || "Not specified"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {adoptersList.map((u) => (
-                  <tr key={u.userId}>
-                    <td><strong>{u.name}</strong></td>
-                    <td>{u.userId} ({u.email || "N/A"})</td>
-                    <td>{u.phone || "Not provided"}</td>
-                    <td>{u.homeType || "Not specified"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* EDIT DOG MODAL */}
+      {/* Edit Dog Modal */}
       {editingDog && (
         <div className="modal-overlay" onClick={() => setEditingDog(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-top">
-              <h2>Edit Listing — {editingDog.name}</h2>
-              <button className="close-x" onClick={() => setEditingDog(null)}>&times;</button>
+              <h3>Edit Dog Listing — {editingDog.name}</h3>
+              <button className="close-x" onClick={() => setEditingDog(null)}>
+                ×
+              </button>
             </div>
-            <form onSubmit={handleSaveEdit} className="admin-form">
+            <form className="admin-form" onSubmit={handleSaveEditDog}>
               <input
                 type="text"
                 value={editingDog.name}
                 onChange={(e) => setEditingDog({ ...editingDog, name: e.target.value })}
+                placeholder="Dog Name"
                 required
               />
               <input
                 type="text"
                 value={editingDog.breed}
                 onChange={(e) => setEditingDog({ ...editingDog, breed: e.target.value })}
+                placeholder="Breed"
                 required
+              />
+              <div className="two-col-inputs">
+                <input
+                  type="text"
+                  value={editingDog.age}
+                  onChange={(e) => setEditingDog({ ...editingDog, age: e.target.value })}
+                  placeholder="Age"
+                />
+                <select
+                  className="breed-dropdown"
+                  value={editingDog.status || "Available"}
+                  onChange={(e) => setEditingDog({ ...editingDog, status: e.target.value })}
+                >
+                  <option value="Available">Available</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Adopted">Adopted</option>
+                </select>
+              </div>
+              <input
+                type="text"
+                value={editingDog.medicalNotes || ""}
+                onChange={(e) =>
+                  setEditingDog({ ...editingDog, medicalNotes: e.target.value })
+                }
+                placeholder="Medical / Vet Notes"
               />
               <input
                 type="text"
-                value={editingDog.age}
-                onChange={(e) => setEditingDog({ ...editingDog, age: e.target.value })}
-                required
+                value={editingDog.image}
+                onChange={(e) => setEditingDog({ ...editingDog, image: e.target.value })}
+                placeholder="Image URL"
               />
-              <select
-                className="breed-dropdown"
-                value={editingDog.status || "Available"}
-                onChange={(e) => setEditingDog({ ...editingDog, status: e.target.value })}
-              >
-                <option value="Available">Available</option>
-                <option value="Pending">Pending</option>
-                <option value="Adopted">Adopted</option>
-              </select>
-              <input
-                type="text"
-                placeholder="Vet Notes"
-                value={editingDog.vetNotes || ""}
-                onChange={(e) => setEditingDog({ ...editingDog, vetNotes: e.target.value })}
-              />
-              <button type="submit" className="submit-btn">Save Changes</button>
+              <button type="submit" className="submit-btn">
+                Save Changes
+              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* PRINTABLE ADOPTION CERTIFICATE MODAL */}
-      {certificateRecord && (
-        <div className="modal-overlay" onClick={() => setCertificateRecord(null)}>
-          <div className="modal-content certificate-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="cert-border">
-              <p className="cert-eyebrow">PAWFECT HOME ANIMAL SHELTER &amp; RESCUE</p>
-              <h2 className="cert-title">Official Certificate of Adoption</h2>
-              <p className="cert-sub">This proudly certifies that</p>
-              <h3 className="cert-adopter">{certificateRecord.adopterName}</h3>
-              <p className="cert-sub">has officially adopted and provided a forever home to</p>
-              <h3 className="cert-dog">{certificateRecord.dogName} ({certificateRecord.breed})</h3>
-              <p className="cert-date">Adopted on {certificateRecord.adoptedDate} • Record ID: {certificateRecord.id}</p>
-            </div>
-            <div style={{ display: "flex", gap: "10px", marginTop: "18px", justifyContent: "flex-end" }}>
-              <button className="submit-btn" onClick={() => window.print()}>
-                <Printer size={16} /> Print / Save PDF
+      {/* Official Adoption Certificate Modal */}
+      {certificateData && (
+        <div className="modal-overlay" onClick={() => setCertificateData(null)}>
+          <div
+            className="modal-content certificate-sheet"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-top">
+              <h3>Official Adoption Certificate</h3>
+              <button className="close-x" onClick={() => setCertificateData(null)}>
+                ×
               </button>
-              <button className="logout-btn" onClick={() => setCertificateRecord(null)}>
-                Close
+            </div>
+            <div className="cert-border">
+              <div className="cert-eyebrow">PAWFECT HOME ANIMAL SHELTER</div>
+              <h2 className="cert-title">Certificate of Adoption</h2>
+              <p className="cert-sub">This proudly certifies that</p>
+              <div className="cert-adopter">{certificateData.adopterName}</div>
+              <p className="cert-sub">has officially welcomed into their forever home</p>
+              <div className="cert-dog">
+                {certificateData.dogName} ({certificateData.dogBreed})
+              </div>
+              <p className="cert-date">Adopted on {certificateData.adoptedDate}</p>
+            </div>
+            <div style={{ marginTop: "16px", textAlign: "right" }}>
+              <button
+                type="button"
+                className="submit-btn"
+                onClick={() => window.print()}
+              >
+                Print / Save as PDF
               </button>
             </div>
           </div>
@@ -617,4 +829,6 @@ export default function AdminModule({
       )}
     </div>
   );
-}
+};
+
+export default AdminModule;
