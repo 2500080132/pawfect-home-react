@@ -1,7 +1,7 @@
 import React from "react";
-import { Dog, LogOut, ShieldCheck, User } from "lucide-react";
+import { Dog, LogOut, ShieldCheck, User, AlertTriangle, MessageSquare } from "lucide-react";
 
-export default function Navbar({ currentUser, onLogout, currentView, setView, favCount }) {
+export default function Navbar({ currentUser, onLogout, currentView, setView, favCount, msgCount }) {
   return (
     <header className="navbar">
       <div className="nav-brand" onClick={() => setView("catalog")}>
@@ -34,10 +34,28 @@ export default function Navbar({ currentUser, onLogout, currentView, setView, fa
             >
               My Requests
             </button>
+            <button
+              className={`nav-btn ${currentView === "rescue" ? "active" : ""}`}
+              onClick={() => setView("rescue")}
+            >
+              <AlertTriangle size={14} style={{ verticalAlign: "-2px", marginRight: "4px" }} />
+              Report a Rescue
+            </button>
+            <button
+              className={`nav-btn ${currentView === "messages" ? "active" : ""}`}
+              onClick={() => setView("messages")}
+            >
+              <MessageSquare size={14} style={{ verticalAlign: "-2px", marginRight: "4px" }} />
+              My Messages {msgCount > 0 && <span className="nav-dot">{msgCount}</span>}
+            </button>
           </>
         )}
 
-        <div className="user-profile-badge">
+        <div
+          className={`user-profile-badge ${currentUser.role !== "admin" ? "clickable" : ""}`}
+          onClick={() => currentUser.role !== "admin" && setView("profile")}
+          title={currentUser.role !== "admin" ? "Edit Adopter Profile & Auto-Fill" : "Admin"}
+        >
           <User size={16} />
           <span>{currentUser.name}</span>
         </div>

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Dog, Lock, Mail, User, ShieldCheck } from "lucide-react";
+import { Dog, Lock, Mail, User, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
-export default function AuthModal({ onLoginSuccess }) {
-  // Modes: "customer-login", "admin-login", "signup"
-  const [activeTab, setActiveTab] = useState("customer-login");
+export default function AuthModal({ onLoginSuccess, showToast }) {
+  const [activeTab, setActiveTab] = useState("adopter-login");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     userId: "",
@@ -21,17 +21,16 @@ export default function AuthModal({ onLoginSuccess }) {
   const switchTab = (tab) => {
     setActiveTab(tab);
     setErrorMsg("");
+    setShowPassword(false);
     setFormData({ userId: "", name: "", email: "", password: "" });
   };
 
-  // 1. Separate Customer Login Handler
-  const handleCustomerLogin = (e) => {
+  const handleAdopterLogin = (e) => {
     e.preventDefault();
     setErrorMsg("");
 
     const inputId = formData.userId.trim().toLowerCase();
     const inputPass = formData.password.trim();
-
     const storedUsers = JSON.parse(localStorage.getItem("rescue_users_v18")) || [];
 
     const user = storedUsers.find((u) => {
@@ -41,30 +40,28 @@ export default function AuthModal({ onLoginSuccess }) {
 
       const idMatches = storedId === inputId || storedEmail === inputId;
       const passMatches = storedPass === inputPass;
-      const roleMatches = !u.role || u.role === "customer";
+      const roleMatches = !u.role || u.role === "customer" || u.role === "adopter";
 
       return idMatches && passMatches && roleMatches;
     });
 
     if (user) {
-      localStorage.setItem("rescue_active_user_v18", JSON.stringify(user));
-      onLoginSuccess(user);
+      const normalizedUser = { ...user, role: "adopter" };
+      localStorage.setItem("rescue_active_user_v18", JSON.stringify(normalizedUser));
+      onLoginSuccess(normalizedUser);
     } else {
-      setErrorMsg("Invalid customer credentials. Please check your username or password.");
+      setErrorMsg("Invalid adopter credentials. Please check your username or password.");
     }
   };
 
-  // 2. Separate Admin Login Handler
   const handleAdminLogin = (e) => {
     e.preventDefault();
     setErrorMsg("");
 
     const inputId = formData.userId.trim().toLowerCase();
     const inputPass = formData.password.trim();
-
     const storedUsers = JSON.parse(localStorage.getItem("rescue_users_v18")) || [];
 
-    // Check fixed default admin or created admin accounts in LocalStorage
     const isDefaultAdmin = inputId === "admin" && inputPass === "admin123";
     const isRegisteredAdmin = storedUsers.some(
       (u) =>
@@ -87,7 +84,6 @@ export default function AuthModal({ onLoginSuccess }) {
     }
   };
 
-  // 3. Signup Handler (Registers Customer to LocalStorage)
   const handleSignup = (e) => {
     e.preventDefault();
     setErrorMsg("");
@@ -118,14 +114,19 @@ export default function AuthModal({ onLoginSuccess }) {
       name: cleanName,
       email: cleanEmail,
       password: cleanPassword,
-      role: "customer",
+      role: "adopter",
+      phone: "",
+      address: "",
+      homeType: "Apartment / Flat",
+      experience: "First-time Dog Owner",
+      joinedDate: new Date().toLocaleDateString()
     };
 
     storedUsers.push(newUser);
     localStorage.setItem("rescue_users_v18", JSON.stringify(storedUsers));
     localStorage.setItem("rescue_active_user_v18", JSON.stringify(newUser));
 
-    alert("Account created successfully!");
+    if (showToast) showToast("Adopter account created successfully!");
     onLoginSuccess(newUser);
   };
 
@@ -137,15 +138,14 @@ export default function AuthModal({ onLoginSuccess }) {
             <Dog size={36} color="#fff" />
           </div>
           <h2>Pawfect Home</h2>
-          <p>Pet Adoption &amp; Rescue Portal</p>
+          <p>Pet Adoption &amp; Stray Rescue Portal</p>
         </div>
 
-        {/* Dedicated 3-Way Tabs */}
         <div className="tab-switcher">
           <button
             type="button"
-            className={activeTab === "customer-login" ? "tab-active" : ""}
-            onClick={() => switchTab("customer-login")}
+            className={activeTab === "adopter-login" ? "tab-active" : ""}
+            onClick={() => switchTab("adopter-login")}
           >
             Adopter Login
           </button>
@@ -167,15 +167,14 @@ export default function AuthModal({ onLoginSuccess }) {
 
         {errorMsg && <div className="alert-error">{errorMsg}</div>}
 
-        {/* CUSTOMER LOGIN VIEW */}
-        {activeTab === "customer-login" && (
-          <form onSubmit={handleCustomerLogin} className="auth-form">
+        {activeTab === "adopter-login" && (
+          <form onSubmit={handleAdopterLogin} className="auth-form">
             <div className="input-group">
               <User size={18} />
               <input
                 type="text"
                 name="userId"
-                placeholder="Customer Username or Email"
+                placeholder="Adopter Username or Email"
                 value={formData.userId}
                 onChange={handleChange}
                 required
@@ -185,22 +184,29 @@ export default function AuthModal({ onLoginSuccess }) {
             <div className="input-group">
               <Lock size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Password"
                 value={formData.password}
                 onChange={handleChange}
                 required
               />
+              <button
+                type="button"
+                className="eye-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
 
             <button type="submit" className="submit-btn">
-              Login as Customer
+              Login as Adopter
             </button>
           </form>
         )}
 
-        {/* ADMIN LOGIN VIEW */}
         {activeTab === "admin-login" && (
           <form onSubmit={handleAdminLogin} className="auth-form">
             <div className="input-group">
@@ -218,13 +224,20 @@ export default function AuthModal({ onLoginSuccess }) {
             <div className="input-group">
               <Lock size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Admin Master Key / Password"
                 value={formData.password}
                 onChange={handleChange}
                 required
               />
+              <button
+                type="button"
+                className="eye-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
 
             <button type="submit" className="submit-btn" style={{ background: "#dc2626" }}>
@@ -233,7 +246,6 @@ export default function AuthModal({ onLoginSuccess }) {
           </form>
         )}
 
-        {/* SIGN UP VIEW */}
         {activeTab === "signup" && (
           <form onSubmit={handleSignup} className="auth-form">
             <div className="input-group">
@@ -241,7 +253,7 @@ export default function AuthModal({ onLoginSuccess }) {
               <input
                 type="text"
                 name="userId"
-                placeholder="Desired Username"
+                placeholder="Desired Adopter Username"
                 value={formData.userId}
                 onChange={handleChange}
                 required
@@ -275,17 +287,24 @@ export default function AuthModal({ onLoginSuccess }) {
             <div className="input-group">
               <Lock size={18} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 placeholder="Create Password (min 6 characters)"
                 value={formData.password}
                 onChange={handleChange}
                 required
               />
+              <button
+                type="button"
+                className="eye-toggle-btn"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
 
             <button type="submit" className="submit-btn">
-              Create Customer Account
+              Create Adopter Account
             </button>
           </form>
         )}
